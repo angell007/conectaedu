@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateElementsTable extends Migration
+class CreateElementInventoryTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,12 +13,13 @@ class CreateElementsTable extends Migration
      */
     public function up()
     {
-        Schema::create('elements', function (Blueprint $table) {
+        Schema::create('element_inventory', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->index();
-            $table->string('reference');
-            $table->boolean('status')->index();
-            $table->text('qr')->nullable();
+            $table->unsignedInteger('inventory_id');
+            $table->unsignedInteger('element_id');
+            $table->Integer('quantity');
+            $table->Integer('missing');
+            $table->boolean('alert');
             $table->timestamps();
         });
     }
@@ -30,6 +31,6 @@ class CreateElementsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('elements');
+        Schema::dropIfExists('element_inventory');
     }
 }

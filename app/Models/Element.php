@@ -10,7 +10,7 @@ class Element extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 'reference', 'quantity', 'status', 'store_id', 'qr',
+        'name', 'reference',  'status', 'qr',
     ];
 
     protected $dates = ['created_at', 'updated_at'];

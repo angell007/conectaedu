@@ -33,11 +33,10 @@ class StoreController extends Controller
             'status' => true,
             'address' => request('address'),
             'quantity_elements' => request('quantity_elements'),
-            'qr' => $this->generateQr(request('name')),
-
         ]);
-
+        $item->qr =  $this->generateQr("qr" . $item->id, 'stores');
         $item->save();
+
         return $this->success(['message' => 'Element created successfully', 'item' => $item], 201);
     }
 

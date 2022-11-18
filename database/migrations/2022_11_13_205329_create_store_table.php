@@ -19,7 +19,7 @@ class CreateStoreTable extends Migration
             $table->boolean('status')->index();
             $table->string('address');
             $table->integer('quantity_elements');
-            $table->text('qr');
+            $table->text('qr')->nullable();
             $table->timestamps();
         });
     }

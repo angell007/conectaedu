@@ -36,4 +36,18 @@ class UserController extends Controller
         return $this->success(['message' => 'User created successfully'], 201);
         // return $this->success(['message' => 'User created successfully', 'token' => $token], 201);
     }
+    public function index()
+    {
+
+        $items = User::get([
+            'email',
+            // 'document_type' => request('document_type'),
+            // 'document_number',
+            'name',
+            // 'password' => bcrypt(request('document_number')),
+        ]);
+
+
+        return $this->success($items, 201);
+    }
 }

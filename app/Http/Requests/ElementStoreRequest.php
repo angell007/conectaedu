@@ -24,10 +24,8 @@ class ElementStoreRequest extends FormRequest
     public function rules()
     {
         return [
-            'name' => 'required|string|max:255|unique:elements,id' . $this->id,
-            'reference' => 'string|min:2|unique:elements,id' . $this->id,
-            'quantity' => 'required',
-            'store_id' => 'required',
+            'name' => 'required|string|max:255|unique:elements,name' . $this->id,
+            'reference' => 'string|min:2|unique:elements,reference' . $this->id,
         ];
     }
 }
