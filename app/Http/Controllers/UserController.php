@@ -41,6 +41,7 @@ class UserController extends Controller
 
         $items = User::get([
             'email',
+            'id',
             // 'document_type' => request('document_type'),
             // 'document_number',
             'name',

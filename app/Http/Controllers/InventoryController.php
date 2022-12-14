@@ -20,7 +20,6 @@ class InventoryController extends Controller
     public function register(Store $store)
     {
 
-
         $existItems = Inventory::with('elements', 'store')->where('store_id', $store->id)->latest()->first();
 
         $newItems = [];
@@ -30,7 +29,8 @@ class InventoryController extends Controller
         $inventory = Inventory::create([
             'store_id' => $store->id,
             'date' => Carbon::now(),
-            'user_id' => Auth::user()->id,
+            'user_id' => 1,
+            // 'user_id' => Auth::user()->id,
             'read' => 0
         ]);
 
@@ -63,7 +63,7 @@ class InventoryController extends Controller
 
         if ($existItems) {
             $oldItems = $existItems->elements()->get();
-            if ($oldItem = $oldItems->find($id)) $missing = $oldItem->quantities->quantity - $item['quantity'];
+            if (isset($id)) if ($oldItem = $oldItems->find($id)) $missing = $oldItem->quantities->quantity - $item['quantity'];
             $oldItemsArray = json_decode(json_encode($existItems->elements()->pluck('elements.id')), true);
 
             $missings =  array_diff($oldItemsArray, $newItems);
@@ -94,26 +94,83 @@ class InventoryController extends Controller
     {
 
         $items = request()->get("items");
-        $inventory->update([
-            'store_id' => request()->get('store_id'),
-        ]);
 
         $inventory->elements()->detach();
 
+        $existItems = $inventory->load('elements', 'store');
+
+        $newItems = [];
+
+        $c = 0;
+
         foreach ($items as $item) {
+
+            $c++;
+
+            $missing = 0;
+            $alert = false;
+
             $id = preg_replace('/[^0-9]/', '', $item['qr']);
-            DB::table('element_inventory')->insert([
-                'element_id' => $id,
-                'inventory_id' => $inventory->id,
-                'quantity' => $item['quantity'],
-            ]);
+            array_push($newItems, $id);
+
+            if ($existItems) {
+                $oldItems = $existItems->elements()->get();
+                if ($oldItem = $oldItems->find($id)) {
+                    $missing = $item['quantity'] - $oldItem->quantities->quantity;
+                }
+            }
+
+            if (Element::find($id)) {
+                DB::table('element_inventory')->insert([
+                    'element_id' => $id,
+                    'inventory_id' => $inventory->id,
+                    'quantity' => $item['quantity'],
+                    'alert' => $alert,
+                    'missing' => $missing,
+                ]);
+            }
         }
 
-        return $this->success(['message' => 'Element update successfully'], 200);
+
+        if ($existItems) {
+
+
+            $oldItems = $existItems->elements()->get();
+            if ($oldItem = $oldItems->find($id)) $missing = $oldItem->quantities->quantity - $item['quantity'];
+
+
+            $oldItemsArray = json_decode(json_encode($existItems->elements()->pluck('elements.id')), true);
+
+            $missings =  array_diff($oldItemsArray, $newItems);
+
+
+            if ($missings) {
+                foreach ($missings as $value) {
+
+                    $oldItem = $oldItems->find($value);
+                    $missing = $oldItem->quantities->quantity;
+
+                    DB::table('element_inventory')->insert([
+                        'element_id' => $value,
+                        'inventory_id' => $inventory->id,
+                        'quantity' => 0,
+                        'alert' => true,
+                        'missing' => $missing,
+                    ]);
+                }
+            }
+        }
+
+
+        $inventory->updated_at = Carbon::now();
+        $inventory->save();
+        //Comparision with old inventory
+        return $this->success(['message' => 'Inventory update successfully'], 200);
     }
 
     public function last(Store $store)
     {
+
         $items = Inventory::with('elements', 'store')->where('store_id', $store->id)->latest()->first();
 
         return $this->success($items, 200);
@@ -182,6 +239,18 @@ class InventoryController extends Controller
     public function unreaded()
     {
         $items = Inventory::with('user', 'elements', 'store')->where('read', 0)->get();
+        return $this->success($items, 200);
+    }
+
+    public function owners($id)
+    {
+        $items = Inventory::with('user', 'elements', 'store')->where('user_id', $id)->OrderBy('id', 'desc')->get();
+        return $this->success($items, 200);
+    }
+
+    public function myowners($id)
+    {
+        $items = Inventory::with('user', 'elements', 'store')->where('user_id', $id)->OrderBy('id', 'desc')->get();
         return $this->success($items, 200);
     }
 }
