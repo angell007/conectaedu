@@ -16,11 +16,42 @@ class InventoryController extends Controller
 {
 
     use Response;
+    public function first()
+    {
+        $inventory = Inventory::create([
+            'store_id' => 0,
+            'date' => Carbon::now(),
+            'user_id' => 0,
+            // 'user_id' => Auth::user()->id,
+            'read' => 0
+        ]);
+
+
+        $elemetns = Element::all();
+        foreach ($elemetns as $elemetn) {
+            DB::table('element_inventory')->insert([
+                'element_id' => $elemetn->id,
+                'inventory_id' => $inventory->id,
+                'quantity' => 1,
+                'alert' => false,
+                'missing' => 0,
+            ]);
+        }
+    }
+
 
     public function register(Store $store)
     {
+        $existItems = Inventory::with(['elements' => function ($q) {
+            $q->where('status', 1);
+        }, 'store'])->where('store_id', $store->id)->latest()->first();
 
-        $existItems = Inventory::with('elements', 'store')->where('store_id', $store->id)->latest()->first();
+        return response()->json($existItems);
+
+        if (!$existItems) $existItems = Inventory::with(['elements' => function ($q) {
+            $q->where('status', 1);
+        }, 'store'])->where('store_id', 0)->first();
+
 
         $newItems = [];
 
@@ -97,7 +128,9 @@ class InventoryController extends Controller
 
         $inventory->elements()->detach();
 
-        $existItems = $inventory->load('elements', 'store');
+        $existItems = $inventory->load(['elements' => function ($q) {
+            $q->where('status', 1);
+        }, 'store']);
 
         $newItems = [];
 
@@ -171,7 +204,9 @@ class InventoryController extends Controller
     public function last(Store $store)
     {
 
-        $items = Inventory::with('elements', 'store')->where('store_id', $store->id)->latest()->first();
+        $items = Inventory::with(['elements' => function ($q) {
+            $q->where('status', 1)->select('name', 'sku', 'qr');
+        }, 'store'])->where('store_id', $store->id)->latest()->first();
 
         return $this->success($items, 200);
     }
@@ -186,9 +221,14 @@ class InventoryController extends Controller
         $storesMissings = 0;
         $storesAlerts = 0;
 
+        $storesCount = $stores->count();
+        $inventoriesCount = Inventory::count();
+
         foreach ($stores->pluck('id') as $store) {
 
-            $inventory = Inventory::with('elements', 'store')->where('store_id', $store)->latest()->first();
+            $inventory = Inventory::with(['elements' => function ($q) {
+                $q->where('status', 1);
+            }, 'store'])->where('store_id', $store)->latest()->first();
             if ($inventory) $inventories[] = $inventory;
         }
 
@@ -214,7 +254,7 @@ class InventoryController extends Controller
         }
 
 
-        return $this->success(['storesWithMissings' => $storesMissings, 'storesWithAlerts' => $storesAlerts,  'missings' => $missings, 'alerts' => $alerts], 200);
+        return $this->success(['stores' =>  $storesCount, 'inventories' => $inventoriesCount, 'storesWithMissings' => $storesMissings, 'storesWithAlerts' => $storesAlerts,  'missings' => $missings, 'alerts' => $alerts], 200);
     }
 
 
@@ -238,19 +278,47 @@ class InventoryController extends Controller
 
     public function unreaded()
     {
-        $items = Inventory::with('user', 'elements', 'store')->where('read', 0)->get();
+        $items = Inventory::with(['user', 'elements' => function ($q) {
+            $q->where('status', 1);
+        }, 'store'])->where('read', 0)->where('store_id', '<>', 0)->get();
+        return $this->success($items, 200);
+    }
+
+    public function markasread($id)
+    {
+        $items = Inventory::with(['user', 'elements' => function ($q) {
+            $q->where('status', 1);
+        }, 'store'])->where('user_id', $id)->update([
+            'read' => 1
+        ]);
         return $this->success($items, 200);
     }
 
     public function owners($id)
     {
-        $items = Inventory::with('user', 'elements', 'store')->where('user_id', $id)->OrderBy('id', 'desc')->get();
+        $items = Inventory::with(['user', 'elements' => function ($q) {
+            $q->where('status', 1);
+        }, 'store'])->where('user_id', $id)->OrderBy('id', 'desc')->get();
         return $this->success($items, 200);
     }
 
+
     public function myowners($id)
     {
-        $items = Inventory::with('user', 'elements', 'store')->where('user_id', $id)->OrderBy('id', 'desc')->get();
+        $items = Inventory::with(['user', 'elements' => function ($q) {
+            $q->where('status', 1);
+        }, 'store'])
+            ->where('user_id', $id)
+            ->OrderBy('id', 'desc')->get();
+        return $this->success($items, 200);
+    }
+
+    public function alls()
+    {
+        $items = Inventory::with(['user', 'elements' => function ($q) {
+            $q->where('status', 1);
+        }, 'store'])
+            ->where('store_id', '<>', 0)->OrderBy('id', 'desc')->get();
         return $this->success($items, 200);
     }
 }

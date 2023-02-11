@@ -39,14 +39,14 @@ class UserController extends Controller
     public function index()
     {
 
-        $items = User::get([
+        $items = User::select([
             'email',
             'id',
             // 'document_type' => request('document_type'),
             // 'document_number',
             'name',
             // 'password' => bcrypt(request('document_number')),
-        ]);
+        ])->get();
 
 
         return $this->success($items, 201);

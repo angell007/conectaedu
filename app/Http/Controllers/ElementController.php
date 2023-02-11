@@ -7,7 +7,8 @@ use App\Models\Element;
 use App\Models\Store;
 use App\Traits\Qr;
 use App\Traits\Response;
-use Illuminate\Support\Facades\File;
+
+use Barryvdh\DomPDF\Facade\Pdf as PDF;
 
 class ElementController extends Controller
 {
@@ -15,7 +16,14 @@ class ElementController extends Controller
 
     public function index(Store $store)
     {
-        $items = Element::select('name', 'reference', 'id')->paginate();
+        $items = Element::select('name', 'sku', 'sheet_size', 'packing', 'status', 'id')
+            ->when(request()->get('name') != 'null', function ($q) {
+                $q->orwhere('name', 'LIKE', request()->get('name') . "%");
+            })
+            ->when(request()->get('reference') != 'null', function ($q) {
+                $q->orwhere('sku', 'LIKE', request()->get('name') . "%");
+            })
+            ->paginate(20);
         return $this->success($items);
     }
 
@@ -26,6 +34,13 @@ class ElementController extends Controller
 
     public function register(ElementStoreRequest $request)
     {
+
+        // $elemetns = Element::all();
+        // foreach ($elemetns as $elemetn) {
+        //     $elemetn->qr =  $this->generateQr("qr" . $elemetn->id, 'items');
+        //     $elemetn->save();
+        // }
+
         $item = Element::create([
             'name' => request('name'),
             'status' => true,
@@ -36,6 +51,7 @@ class ElementController extends Controller
 
         $item->qr =  $this->generateQr("qr" . $item->id, 'items');
         $item->save();
+
         return $this->success(['message' => 'Element created successfully', 'item' => $item], 201);
     }
 
@@ -51,20 +67,23 @@ class ElementController extends Controller
         return $this->success(['message' => 'Element update successfully', 'item' => $element], 200);
     }
 
-    public function changeStaus(Element $element)
+    public function changuestatus()
     {
 
-        $element->update(['status' => request('status')]);
+        $element = Element::find(request()->get('id'));
+
+        $status = $element->status == 'activo' ? 0 : 1;
+        
+        $element->update(['status' => $status]);
 
         return $this->success(['message' => 'Element update successfully', 'item' => $element], 200);
     }
 
-    public function getQr(Element $element)
+
+    public function downloadPdf($id)
     {
-        // return File::get(public_path('/imgs/stores/' . $element->qr . '.png'));
-
-        // return response()->file(public_path('/imgs/stores/' . $element->qr . '.png'));
-
-        // return Image::make($storagePath)->response();
+        $elemetn = Element::find($id);
+        $pdf = PDF::loadView('pdfs.printqr', compact('elemetn'));
+        return $pdf->download('qr.pdf');
     }
 }

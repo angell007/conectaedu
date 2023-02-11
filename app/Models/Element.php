@@ -14,4 +14,10 @@ class Element extends Model
     ];
 
     protected $dates = ['created_at', 'updated_at'];
+
+    public function getStatusAttribute()
+    {
+        if ($this->attributes['status'] == 1) return 'activo';
+        return 'inactivo';
+    }
 }
